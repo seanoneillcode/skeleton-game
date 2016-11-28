@@ -53,13 +53,14 @@ public class SkeletonGame extends ApplicationAdapter {
 
 	@Override
 	public void render () {
-        update();
+
         handleInput();
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		batch.begin();
 
         if (time > 0) {
+            update();
             batch.draw(skull, playerPosition.x, playerPosition.y);
             batch.draw(bone, bonePos.x, bonePos.y);
             font.draw(batch, "You've picked up : " + pickedBones, 10, 20);
