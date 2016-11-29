@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -15,101 +16,90 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
 public class CromwellGame extends ApplicationAdapter {
-	SpriteBatch batch;
-	Texture skull;
-    Texture bone;
-    Vector2 playerPosition;
-    private static final float PLAYER_SPEED = 200.0f;
-    BitmapFont font;
-    int pickedBones;
+    private SpriteBatch batch;
+    private Vector2 playerPosition;
+    private static final float PLAYER_SPEED = 22.0f;
+    private BitmapFont font;
 
-    Vector2 bonePos;
-    float screenWidth;
-    float screenHeight;
-    float time;
+    private float screenWidth;
+    private float screenHeight;
+    private float time;
 
-    Animation walkAnimation;
-    TextureRegion[] walkFrames;
-    Texture walkSheet;
-    TextureRegion currentFrame;
+    private Animation walkAnimation;
+    private TextureRegion[] walkFrames;
+    private Texture walkSheet;
+    private TextureRegion currentFrame;
 
-    float stateTime;
+    private TextureRegion standing;
+
+    private float stateTime;
+    private OrthographicCamera cam;
+
+    final float VIRTUAL_HEIGHT = 128f;
+    private boolean isMoving = false;
+    private boolean isRight = true;
 
 	@Override
 	public void create () {
-        walkSheet = new Texture(Gdx.files.internal("walk-test.png"));
-        TextureRegion[][] tmp = TextureRegion.split(walkSheet, walkSheet.getWidth()/5, walkSheet.getHeight());
-        walkFrames = new TextureRegion[8];
+        standing = new TextureRegion(new Texture(Gdx.files.internal("standing.png")));
+        walkSheet = new Texture(Gdx.files.internal("walk-test-gg2.png"));
+        int numberOfFrames = 8;
+        TextureRegion[][] tmp = TextureRegion.split(walkSheet, walkSheet.getWidth()/numberOfFrames, walkSheet.getHeight());
+        walkFrames = new TextureRegion[numberOfFrames];
         int index = 0;
-        for (int j = 0; j < 5; j++) {
+        for (int j = 0; j < numberOfFrames; j++) {
             walkFrames[index++] = tmp[0][j];
         }
-        for (int j = 3; j > 0; j--) {
-            walkFrames[index++] = tmp[0][j];
-        }
-        walkAnimation = new Animation(0.2f, walkFrames);
+        walkAnimation = new Animation(0.1f, walkFrames);
         stateTime = 0f;
 
 		batch = new SpriteBatch();
-        skull = new Texture("skull.png");
-        bone = new Texture("bone.png");
         playerPosition = getRandomPosition();
 
         FileHandle handle = Gdx.files.internal("MavenPro-regular.ttf");
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(handle);
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         font = generator.generateFont(parameter);
-        pickedBones = 0;
-        screenWidth = Gdx.graphics.getWidth();
-        screenHeight = Gdx.graphics.getHeight();
-        bonePos = getRandomPosition();
-        time = 10;
+
+        screenWidth = 128f;
+        screenHeight = 128f;
+
+        cam = new OrthographicCamera();
 	}
 
     private Vector2 getRandomPosition() {
-        float xpos = MathUtils.random(30, screenWidth - 30);
-        float ypos = MathUtils.random(30, screenHeight - 30);
+        float xpos = MathUtils.random(0, screenWidth);
+        float ypos = MathUtils.random(0, screenHeight);
         return new Vector2(xpos, ypos);
     }
 
+    public void resize (int width, int height) {
+        cam.setToOrtho(false, VIRTUAL_HEIGHT * width / (float)height, VIRTUAL_HEIGHT);
+        batch.setProjectionMatrix(cam.combined);
+    }
 
 	@Override
 	public void render () {
         stateTime += Gdx.graphics.getDeltaTime();
         handleInput();
+        update();
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        currentFrame = walkAnimation.getKeyFrame(stateTime, true);
-
 		batch.begin();
-
-        if (time > 0) {
-            update();
-            batch.draw(skull, playerPosition.x, playerPosition.y);
-            batch.draw(bone, bonePos.x, bonePos.y);
-            font.draw(batch, "You've picked up : " + pickedBones, 10, 20);
-            font.draw(batch, "time left : " + (int)(time), screenWidth - 100, 20);
-            font.draw(batch, "!!! PICK UP ALL YOUR BONES !!!", screenWidth * 0.3f, screenHeight - 10);
-            batch.draw(currentFrame, 16, 16);
+        if (isMoving) {
+            currentFrame = walkAnimation.getKeyFrame(stateTime, true);
+            batch.draw(currentFrame, playerPosition.x, playerPosition.y);
         } else {
-            float xmid = (screenWidth * 0.5f) - 80;
-            float ymid = screenHeight * 0.5f;
-            font.draw(batch, "Time is up!", xmid, ymid + 130);
-            batch.draw(skull, xmid, ymid);
-            font.draw(batch, "your score is : " + pickedBones, xmid, ymid - 40);
-            font.draw(batch, "PRESS SPACE TO PLAY AGAIN", xmid - 40, ymid - 120);
+            batch.draw(standing, playerPosition.x, playerPosition.y);
         }
-
 		batch.end();
 	}
 	
 	@Override
 	public void dispose () {
 		batch.dispose();
-        skull.dispose();
         font.dispose();
-        bone.dispose();
 	}
 
     private void update() {
@@ -117,28 +107,18 @@ public class CromwellGame extends ApplicationAdapter {
         if (playerPosition.x < 0) {
             playerPosition.x = 0;
         }
-        if (playerPosition.x > screenWidth - 100) {
-            playerPosition.x = screenWidth - 100;
+        if (playerPosition.x > screenWidth) {
+            playerPosition.x = screenWidth;
         }
         if (playerPosition.y < 0) {
             playerPosition.y = 0;
         }
-        if (playerPosition.y > screenHeight - 100) {
-            playerPosition.y = screenHeight - 100;
-        }
-
-        Vector2 pmid = playerPosition.cpy().add(50, 50);
-        Vector2 bmid = bonePos.cpy().add(10, 10);
-        if (pmid.dst2(bmid) < 2000) {
-            this.pickedBones++;
-            bonePos = getRandomPosition();
+        if (playerPosition.y > screenHeight) {
+            playerPosition.y = screenHeight;
         }
     }
 
     private void resetGame() {
-        pickedBones = 0;
-        time = 10;
-        bonePos = getRandomPosition();
         playerPosition = getRandomPosition();
     }
 
@@ -150,17 +130,30 @@ public class CromwellGame extends ApplicationAdapter {
         boolean isUpPressed = Gdx.input.isKeyPressed(Input.Keys.UP);
         boolean isDownPressed = Gdx.input.isKeyPressed(Input.Keys.DOWN);
 
+        isMoving = false;
         if (isLeftPressed) {
             playerPosition.add(-actualSpeed, 0);
+            isMoving = true;
+            if (isRight) {
+                flipAnimation();
+            }
+            isRight = false;
         }
         if (isRightPressed) {
             playerPosition.add(actualSpeed, 0);
+            isMoving = true;
+            if (!isRight) {
+                flipAnimation();
+            }
+            isRight = true;
         }
         if (isUpPressed) {
             playerPosition.add(0, actualSpeed);
+            isMoving = true;
         }
         if (isDownPressed) {
             playerPosition.add(0, -actualSpeed);
+            isMoving = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
@@ -169,4 +162,11 @@ public class CromwellGame extends ApplicationAdapter {
             resetGame();
         }
 	}
+
+	private void flipAnimation() {
+        for (TextureRegion frames : walkAnimation.getKeyFrames()) {
+            frames.flip(true, false);
+        }
+        standing.flip(true, false);
+    }
 }
