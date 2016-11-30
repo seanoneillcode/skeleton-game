@@ -54,6 +54,7 @@ public class WizardGame extends ApplicationAdapter {
 
     private int numberOfSkeletons = 4;
     private int wizardLife = 3;
+    private int enemiesKilled = 0;
 
 	@Override
 	public void create () {
@@ -144,8 +145,8 @@ public class WizardGame extends ApplicationAdapter {
             for (Enemy e : enemies) {
                 e.sprite.draw(batch);
             }
-            font.draw(batch, "SOULS : " + wizardLife, 10, 180);
-            font.draw(batch, "WIZARD GAME", 100, 180);
+            font.draw(batch, "SOULS : " + wizardLife, 200, 180);
+            font.draw(batch, "DESTROYED : " + enemiesKilled, 4, 180);
         } else {
             font.draw(batch, "YOU RAN OUT OF SOULS", 80, 128);
             font.draw(batch, "PRESS SPACE TO PLAY AGAIN", 70, 38);
@@ -191,6 +192,7 @@ public class WizardGame extends ApplicationAdapter {
             enemy.update(playerPosition);
             if (enemy.shouldRemove()) {
                 iter2.remove();
+                enemiesKilled = enemiesKilled + 1;
             }
         }
         if (enemies.size() < 1) {
@@ -220,6 +222,7 @@ public class WizardGame extends ApplicationAdapter {
         playerPosition = new Vector2(128, 128);
         enemies.clear();
         bullets.clear();
+        enemiesKilled = 0;
         addWaveOfSkeletons();
     }
 

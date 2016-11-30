@@ -9,6 +9,7 @@ import com.skeleton.game.WizardGame;
 public class DesktopLauncher {
 	public static void main (String[] arg) {
 		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
+        config.fullscreen = false;
 		config.width = 1024;
 		config.height = 768;
 		new LwjglApplication(new WizardGame(), config);
