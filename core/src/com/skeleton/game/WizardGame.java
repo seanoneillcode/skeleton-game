@@ -20,28 +20,37 @@ import com.badlogic.gdx.math.Vector2;
 
 public class WizardGame extends ApplicationAdapter {
 
-    static final int WORLD_WIDTH = 256;
-    static final int WORLD_HEIGHT = 256;
+    private static final int WORLD_WIDTH = 256;
+    private static final int WORLD_HEIGHT = 256;
 
-	SpriteBatch batch;
-    TextureRegion wizard;
-    Texture bolt;
-    Vector2 playerPosition;
+    private SpriteBatch batch;
+    private TextureRegion wizard;
+    private TextureRegion downWizard;
+    private TextureRegion upWizard;
+
+    private Texture skeleton;
+    private Texture bolt;
+    private Vector2 playerPosition;
     private static final float PLAYER_SPEED = 32.0f;
     private static final float BULLET_SPEED = 80f;
-    BitmapFont font;
-    int pickedBones;
+    private static final float SKELETON_SPEED = 32f;
+    private BitmapFont font;
 
-    float screenWidth;
-    float screenHeight;
-    float time;
-    OrthographicCamera camera;
+    private float screenWidth;
+    private float screenHeight;
+    private float time;
+    private OrthographicCamera camera;
 
-    boolean isRight = true;
+    private boolean isRight = true;
 
     private List<Bullet> bullets;
-    float shootCooldown;
+    private List<Enemy> enemies;
+    private float shootCooldown;
     private static final float MAX_COOLDOWN = 0.2f;
+
+    private DIR playerDir = DIR.RIGHT;
+
+    private int numberOfSkeletons = 4;
 
 	@Override
 	public void create () {
@@ -53,7 +62,10 @@ public class WizardGame extends ApplicationAdapter {
 
 		batch = new SpriteBatch();
         wizard = new TextureRegion(new Texture("wizard.png"));
+        upWizard = new TextureRegion(new Texture("wizard-up.png"));
+        downWizard = new TextureRegion(new Texture("wizard-down.png"));
         bolt = new Texture("bolt.png");
+        skeleton = new Texture("skeleton.png");
         playerPosition = getRandomPosition();
 
         FileHandle handle = Gdx.files.internal("MavenPro-regular.ttf");
@@ -61,10 +73,11 @@ public class WizardGame extends ApplicationAdapter {
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = 10;
         font = generator.generateFont(parameter);
-        pickedBones = 0;
         screenWidth = Gdx.graphics.getWidth();
         screenHeight = Gdx.graphics.getHeight();
         bullets = new ArrayList<Bullet>();
+        enemies = new ArrayList<Enemy>();
+        resetGame();
 	}
 
     private Vector2 getRandomPosition() {
@@ -79,6 +92,26 @@ public class WizardGame extends ApplicationAdapter {
         bullets.add(b);
     }
 
+    private void addSkeleton() {
+        Vector2 pos = null;
+        switch (MathUtils.random(3)) {
+            case 0:
+                pos = new Vector2(MathUtils.random(0, 256), 0);
+                break;
+            case 1:
+                pos = new Vector2(MathUtils.random(0, 256), 256);
+                break;
+            case 2:
+                pos = new Vector2(0, MathUtils.random(0, 256));
+                break;
+            case 3:
+                pos = new Vector2(256, MathUtils.random(0, 256));
+                break;
+        }
+        Enemy e = new Enemy(skeleton, pos, 1, SKELETON_SPEED);
+        enemies.add(e);
+    }
+
 	@Override
 	public void render () {
         camera.update();
@@ -89,9 +122,23 @@ public class WizardGame extends ApplicationAdapter {
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		batch.begin();
-        batch.draw(wizard, playerPosition.x, playerPosition.y);
+        switch (playerDir) {
+            case RIGHT:
+            case LEFT:
+                batch.draw(wizard, playerPosition.x, playerPosition.y);
+                break;
+            case UP:
+                batch.draw(upWizard, playerPosition.x, playerPosition.y);
+                break;
+            case DOWN:
+                batch.draw(downWizard, playerPosition.x, playerPosition.y);
+                break;
+        }
         for (Bullet b : bullets) {
             b.sprite.draw(batch);
+        }
+        for (Enemy e : enemies) {
+            e.sprite.draw(batch);
         }
         font.draw(batch, "WIZARD GAME", 0, 0);
 		batch.end();
@@ -121,23 +168,43 @@ public class WizardGame extends ApplicationAdapter {
         while (iter.hasNext()) {
             Bullet bullet = iter.next();
             bullet.update();
-            if (bullet.ttl < 0) {
+            if (bullet.shouldRemove()) {
                 iter.remove();
             }
+            enemyCollision(bullet);
         }
+        Iterator<Enemy> iter2 = enemies.listIterator();
+        while (iter2.hasNext()) {
+            Enemy enemy = iter2.next();
+            enemy.update(playerPosition);
+            if (enemy.shouldRemove()) {
+                iter2.remove();
+            }
+        }
+        if (enemies.size() < 1) {
+            numberOfSkeletons++;
+            addWaveOfSkeletons();
+        }
+    }
 
-//        Vector2 pmid = playerPosition.cpy().add(50, 50);
-//        Vector2 bmid = bonePos.cpy().add(10, 10);
-//        if (pmid.dst2(bmid) < 2000) {
-//            this.pickedBones++;
-//            bonePos = getRandomPosition();
-//        }
+    private void enemyCollision(Bullet bullet) {
+        for (Enemy e : enemies) {
+            if(bullet.sprite.getBoundingRectangle().overlaps(e.sprite.getBoundingRectangle())) {
+                e.health = e.health - 1;
+                bullet.ttl = -1;
+            }
+        }
     }
 
     private void resetGame() {
-        pickedBones = 0;
-        time = 10;
-        playerPosition = getRandomPosition();
+        playerPosition = new Vector2(128, 128);
+        addWaveOfSkeletons();
+    }
+
+    private void addWaveOfSkeletons() {
+        for (int i = 0; i < numberOfSkeletons; i++) {
+            addSkeleton();
+        }
     }
 
 	private void handleInput() {
@@ -154,6 +221,7 @@ public class WizardGame extends ApplicationAdapter {
                 wizard.flip(true, false);
             }
             isRight = false;
+            playerDir = DIR.LEFT;
         }
         if (isRightPressed) {
             playerPosition.add(actualSpeed, 0);
@@ -161,31 +229,50 @@ public class WizardGame extends ApplicationAdapter {
                 wizard.flip(true, false);
             }
             isRight = true;
+            playerDir = DIR.RIGHT;
         }
         if (isUpPressed) {
             playerPosition.add(0, actualSpeed);
+            playerDir = DIR.UP;
         }
         if (isDownPressed) {
             playerPosition.add(0, -actualSpeed);
+            playerDir = DIR.DOWN;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+        Vector2 offset = null;
+        Vector2 dir = null;
+        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+            offset = playerPosition.cpy().add(3, 15);
+            dir = new Vector2(0, BULLET_SPEED);
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+            offset = playerPosition.cpy().add(3, -8);
+            dir = new Vector2(0, -BULLET_SPEED);
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+            offset = playerPosition.cpy().add(-5, 2);
+            dir = new Vector2(-BULLET_SPEED, 0);
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+            offset = playerPosition.cpy().add(15, 2);
+            dir = new Vector2(BULLET_SPEED, 0);
+        }
+        if (offset != null && dir != null) {
             if (shootCooldown < 0) {
                 shootCooldown = MAX_COOLDOWN;
-                if (isRight) {
-                    Vector2 offset = playerPosition.cpy().add(15, 2);
-                    addBullet(new Vector2(BULLET_SPEED, 0), offset);
-                } else {
-                    Vector2 offset = playerPosition.cpy().add(-5, 2);
-                    addBullet(new Vector2(-BULLET_SPEED, 0), offset);
-                }
-
-            } else {
-                shootCooldown = shootCooldown - Gdx.graphics.getDeltaTime();
+                addBullet(dir, offset);
             }
-
         }
+        shootCooldown = shootCooldown - Gdx.graphics.getDeltaTime();
         if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
         }
 	}
+
+	private enum DIR {
+        UP,
+        DOWN,
+        LEFT,
+        RIGHT
+    }
 }

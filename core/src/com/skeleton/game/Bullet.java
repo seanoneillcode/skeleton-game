@@ -18,6 +18,10 @@ public class Bullet {
         this.dir = dir;
     }
 
+    public boolean shouldRemove() {
+        return ttl < 0;
+    }
+
     public void update() {
         float delta = Gdx.graphics.getDeltaTime();
         ttl = ttl - delta;
