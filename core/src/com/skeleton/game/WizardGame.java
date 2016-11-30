@@ -12,10 +12,12 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class WizardGame extends ApplicationAdapter {
@@ -51,6 +53,7 @@ public class WizardGame extends ApplicationAdapter {
     private DIR playerDir = DIR.RIGHT;
 
     private int numberOfSkeletons = 4;
+    private int wizardLife = 3;
 
 	@Override
 	public void create () {
@@ -117,30 +120,37 @@ public class WizardGame extends ApplicationAdapter {
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         handleInput();
-        update();
 
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		batch.begin();
-        switch (playerDir) {
-            case RIGHT:
-            case LEFT:
-                batch.draw(wizard, playerPosition.x, playerPosition.y);
-                break;
-            case UP:
-                batch.draw(upWizard, playerPosition.x, playerPosition.y);
-                break;
-            case DOWN:
-                batch.draw(downWizard, playerPosition.x, playerPosition.y);
-                break;
+        if (wizardLife > 0) {
+            update();
+            switch (playerDir) {
+                case RIGHT:
+                case LEFT:
+                    batch.draw(wizard, playerPosition.x, playerPosition.y);
+                    break;
+                case UP:
+                    batch.draw(upWizard, playerPosition.x, playerPosition.y);
+                    break;
+                case DOWN:
+                    batch.draw(downWizard, playerPosition.x, playerPosition.y);
+                    break;
+            }
+            for (Bullet b : bullets) {
+                b.sprite.draw(batch);
+            }
+            for (Enemy e : enemies) {
+                e.sprite.draw(batch);
+            }
+            font.draw(batch, "SOULS : " + wizardLife, 10, 180);
+            font.draw(batch, "WIZARD GAME", 100, 180);
+        } else {
+            font.draw(batch, "YOU RAN OUT OF SOULS", 80, 128);
+            font.draw(batch, "PRESS SPACE TO PLAY AGAIN", 70, 38);
         }
-        for (Bullet b : bullets) {
-            b.sprite.draw(batch);
-        }
-        for (Enemy e : enemies) {
-            e.sprite.draw(batch);
-        }
-        font.draw(batch, "WIZARD GAME", 0, 0);
+
 		batch.end();
 	}
 	
@@ -171,7 +181,9 @@ public class WizardGame extends ApplicationAdapter {
             if (bullet.shouldRemove()) {
                 iter.remove();
             }
-            enemyCollision(bullet);
+            if (enemyCollision(bullet.sprite.getBoundingRectangle())) {
+                bullet.ttl = -1;
+            }
         }
         Iterator<Enemy> iter2 = enemies.listIterator();
         while (iter2.hasNext()) {
@@ -185,19 +197,29 @@ public class WizardGame extends ApplicationAdapter {
             numberOfSkeletons++;
             addWaveOfSkeletons();
         }
-    }
+        Rectangle rect = new Rectangle(playerPosition.x, playerPosition.y, 16, 16);
 
-    private void enemyCollision(Bullet bullet) {
-        for (Enemy e : enemies) {
-            if(bullet.sprite.getBoundingRectangle().overlaps(e.sprite.getBoundingRectangle())) {
-                e.health = e.health - 1;
-                bullet.ttl = -1;
-            }
+        if (enemyCollision(rect)) {
+            wizardLife = wizardLife - 1;
         }
     }
 
+    private boolean enemyCollision(Rectangle rect) {
+        boolean isColliding = false;
+        for (Enemy e : enemies) {
+            if(rect.overlaps(e.sprite.getBoundingRectangle())) {
+                e.health = e.health - 1;
+                isColliding = true;
+            }
+        }
+        return isColliding;
+    }
+
     private void resetGame() {
+        wizardLife = 3;
         playerPosition = new Vector2(128, 128);
+        enemies.clear();
+        bullets.clear();
         addWaveOfSkeletons();
     }
 
@@ -217,45 +239,45 @@ public class WizardGame extends ApplicationAdapter {
 
         if (isLeftPressed) {
             playerPosition.add(-actualSpeed, 0);
-            if (isRight) {
-                wizard.flip(true, false);
-            }
-            isRight = false;
-            playerDir = DIR.LEFT;
         }
         if (isRightPressed) {
             playerPosition.add(actualSpeed, 0);
-            if (!isRight) {
-                wizard.flip(true, false);
-            }
-            isRight = true;
-            playerDir = DIR.RIGHT;
         }
         if (isUpPressed) {
             playerPosition.add(0, actualSpeed);
-            playerDir = DIR.UP;
         }
         if (isDownPressed) {
             playerPosition.add(0, -actualSpeed);
-            playerDir = DIR.DOWN;
         }
         Vector2 offset = null;
         Vector2 dir = null;
         if (Gdx.input.isKeyPressed(Input.Keys.W)) {
             offset = playerPosition.cpy().add(3, 15);
             dir = new Vector2(0, BULLET_SPEED);
+            playerDir = DIR.UP;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.S)) {
             offset = playerPosition.cpy().add(3, -8);
             dir = new Vector2(0, -BULLET_SPEED);
+            playerDir = DIR.DOWN;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
             offset = playerPosition.cpy().add(-5, 2);
             dir = new Vector2(-BULLET_SPEED, 0);
+            if (isRight) {
+                wizard.flip(true, false);
+            }
+            isRight = false;
+            playerDir = DIR.LEFT;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.D)) {
             offset = playerPosition.cpy().add(15, 2);
             dir = new Vector2(BULLET_SPEED, 0);
+            if (!isRight) {
+                wizard.flip(true, false);
+            }
+            isRight = true;
+            playerDir = DIR.RIGHT;
         }
         if (offset != null && dir != null) {
             if (shootCooldown < 0) {
@@ -266,6 +288,9 @@ public class WizardGame extends ApplicationAdapter {
         shootCooldown = shootCooldown - Gdx.graphics.getDeltaTime();
         if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
+        }
+        if (wizardLife < 1 && Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+            resetGame();
         }
 	}
 
