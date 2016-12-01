@@ -3,6 +3,7 @@ package com.skeleton.game;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
@@ -21,6 +22,7 @@ public class SkeletonGame extends ApplicationAdapter {
     BitmapFont font;
     int pickedBones;
 
+
     Vector2 bonePos;
     float screenWidth;
     float screenHeight;
@@ -28,6 +30,7 @@ public class SkeletonGame extends ApplicationAdapter {
 
 	@Override
 	public void create () {
+
 		batch = new SpriteBatch();
         skull = new Texture("skull.png");
         bone = new Texture("bone.png");

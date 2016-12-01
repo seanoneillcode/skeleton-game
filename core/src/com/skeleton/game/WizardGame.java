@@ -7,6 +7,7 @@ import java.util.List;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -56,8 +57,17 @@ public class WizardGame extends ApplicationAdapter {
     private int wizardLife = 3;
     private int enemiesKilled = 0;
 
-	@Override
+    Sound wizardDeathSound;
+    Sound wizardShootSound;
+    Sound enemyDeathSound;
+
+
+    @Override
 	public void create () {
+        wizardDeathSound = Gdx.audio.newSound(Gdx.files.internal("wizard-death.wav"));
+        wizardShootSound = Gdx.audio.newSound(Gdx.files.internal("wizard-shoot.wav"));
+        enemyDeathSound = Gdx.audio.newSound(Gdx.files.internal("skeleton-hurt.wav"));
+
         float w = Gdx.graphics.getWidth();
         float h = Gdx.graphics.getHeight();
         camera = new OrthographicCamera(WORLD_WIDTH, WORLD_HEIGHT * (h / w));
@@ -94,6 +104,7 @@ public class WizardGame extends ApplicationAdapter {
     private void addBullet(Vector2 dir, Vector2 pos) {
         Bullet b = new Bullet(bolt, dir, pos);
         bullets.add(b);
+        wizardShootSound.play(1.0f, MathUtils.random(0.8f,1.2f), 0.5f);
     }
 
     private void addSkeleton() {
@@ -193,6 +204,7 @@ public class WizardGame extends ApplicationAdapter {
             if (enemy.shouldRemove()) {
                 iter2.remove();
                 enemiesKilled = enemiesKilled + 1;
+                enemyDeathSound.play();
             }
         }
         if (enemies.size() < 1) {
@@ -203,6 +215,7 @@ public class WizardGame extends ApplicationAdapter {
 
         if (enemyCollision(rect)) {
             wizardLife = wizardLife - 1;
+            wizardDeathSound.play();
         }
     }
 
