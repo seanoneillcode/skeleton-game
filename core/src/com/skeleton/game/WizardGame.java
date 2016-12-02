@@ -7,6 +7,7 @@ import java.util.List;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
@@ -59,14 +60,21 @@ public class WizardGame extends ApplicationAdapter {
 
     Sound wizardDeathSound;
     Sound wizardShootSound;
+    Sound deathScreamSound;
     Sound enemyDeathSound;
 
+    Preferences prefs;
+    int previousHighScore;
 
     @Override
 	public void create () {
+        prefs = Gdx.app.getPreferences("WizardGamePreferences");
+        previousHighScore = prefs.getInteger("highscore");
+
         wizardDeathSound = Gdx.audio.newSound(Gdx.files.internal("wizard-death.wav"));
         wizardShootSound = Gdx.audio.newSound(Gdx.files.internal("wizard-shoot.wav"));
         enemyDeathSound = Gdx.audio.newSound(Gdx.files.internal("skeleton-hurt.wav"));
+        deathScreamSound = Gdx.audio.newSound(Gdx.files.internal("death-scream.wav"));
 
         float w = Gdx.graphics.getWidth();
         float h = Gdx.graphics.getHeight();
@@ -159,8 +167,14 @@ public class WizardGame extends ApplicationAdapter {
             font.draw(batch, "SOULS : " + wizardLife, 200, 180);
             font.draw(batch, "DESTROYED : " + enemiesKilled, 4, 180);
         } else {
-            font.draw(batch, "YOU RAN OUT OF SOULS", 80, 128);
-            font.draw(batch, "PRESS SPACE TO PLAY AGAIN", 70, 38);
+            font.draw(batch, "YOU RAN OUT OF SOULS", 80, 158);
+            font.draw(batch, "YOU DESTROYED  " + enemiesKilled + "  ENEMIES", 70, 128);
+            font.draw(batch, "PRESS SPACE TO PLAY AGAIN", 70, 68);
+            if (enemiesKilled == previousHighScore) {
+                font.draw(batch, "NEW HIGH SCORE!", 70, 98);
+            } else {
+                font.draw(batch, "CURRENT HIGH SCORE is " + this.previousHighScore, 70, 98);
+            }
         }
 
 		batch.end();
@@ -204,7 +218,7 @@ public class WizardGame extends ApplicationAdapter {
             if (enemy.shouldRemove()) {
                 iter2.remove();
                 enemiesKilled = enemiesKilled + 1;
-                enemyDeathSound.play();
+                deathScreamSound.play(1.0f, MathUtils.random(0.8f,1.2f), 0.5f);
             }
         }
         if (enemies.size() < 1) {
@@ -216,6 +230,12 @@ public class WizardGame extends ApplicationAdapter {
         if (enemyCollision(rect)) {
             wizardLife = wizardLife - 1;
             wizardDeathSound.play();
+            if (wizardLife < 1) {
+                if (enemiesKilled > previousHighScore) {
+                    prefs.putInteger("highscore", enemiesKilled);
+                    previousHighScore = enemiesKilled;
+                }
+            }
         }
     }
 
@@ -236,6 +256,7 @@ public class WizardGame extends ApplicationAdapter {
         enemies.clear();
         bullets.clear();
         enemiesKilled = 0;
+        numberOfSkeletons = 4;
         addWaveOfSkeletons();
     }
 
