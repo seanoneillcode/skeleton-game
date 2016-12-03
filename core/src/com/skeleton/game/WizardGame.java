@@ -62,19 +62,30 @@ public class WizardGame extends ApplicationAdapter {
     Sound wizardShootSound;
     Sound deathScreamSound;
     Sound enemyDeathSound;
+    Sound loopSound;
+    Sound loopSound2;
 
     Preferences prefs;
     int previousHighScore;
+
+    float hurtCooldown = 0;
+    private static final float HURT_COOL_DOWN = 1f;
+    float waitStart = 0;
+    private static final float WAIT_START_COOLDOWN = 2.0f;
+    private boolean started;
 
     @Override
 	public void create () {
         prefs = Gdx.app.getPreferences("WizardGamePreferences");
         previousHighScore = prefs.getInteger("highscore");
 
-        wizardDeathSound = Gdx.audio.newSound(Gdx.files.internal("wizard-death.wav"));
+        enemyDeathSound = Gdx.audio.newSound(Gdx.files.internal("death-scream.wav"));
         wizardShootSound = Gdx.audio.newSound(Gdx.files.internal("wizard-shoot.wav"));
-        enemyDeathSound = Gdx.audio.newSound(Gdx.files.internal("skeleton-hurt.wav"));
-        deathScreamSound = Gdx.audio.newSound(Gdx.files.internal("death-scream.wav"));
+        wizardDeathSound = Gdx.audio.newSound(Gdx.files.internal("wizard-hurt.wav"));
+        loopSound = Gdx.audio.newSound(Gdx.files.internal("bad-loop.wav"));
+        loopSound.loop(1.0f);
+        loopSound2 = Gdx.audio.newSound(Gdx.files.internal("bad-loop2.wav"));
+        loopSound2.loop(1.0f);
 
         float w = Gdx.graphics.getWidth();
         float h = Gdx.graphics.getHeight();
@@ -112,7 +123,7 @@ public class WizardGame extends ApplicationAdapter {
     private void addBullet(Vector2 dir, Vector2 pos) {
         Bullet b = new Bullet(bolt, dir, pos);
         bullets.add(b);
-        wizardShootSound.play(1.0f, MathUtils.random(0.8f,1.2f), 0.5f);
+        wizardShootSound.play(0.6f, MathUtils.random(0.8f,1.2f), 0.5f);
     }
 
     private void addSkeleton() {
@@ -211,6 +222,22 @@ public class WizardGame extends ApplicationAdapter {
                 bullet.ttl = -1;
             }
         }
+
+        Rectangle rect = new Rectangle(playerPosition.x, playerPosition.y, 16, 16);
+
+        if (enemyCollision(rect)) {
+            wizardLife = wizardLife - 1;
+            wizardDeathSound.play(1.0f);
+            hurtCooldown = HURT_COOL_DOWN;
+            if (wizardLife < 1) {
+                if (enemiesKilled > previousHighScore) {
+                    prefs.putInteger("highscore", enemiesKilled);
+                    previousHighScore = enemiesKilled;
+                }
+            }
+        }
+        hurtCooldown = hurtCooldown - Gdx.graphics.getDeltaTime();
+
         Iterator<Enemy> iter2 = enemies.listIterator();
         while (iter2.hasNext()) {
             Enemy enemy = iter2.next();
@@ -218,24 +245,19 @@ public class WizardGame extends ApplicationAdapter {
             if (enemy.shouldRemove()) {
                 iter2.remove();
                 enemiesKilled = enemiesKilled + 1;
-                deathScreamSound.play(1.0f, MathUtils.random(0.8f,1.2f), 0.5f);
+                if (hurtCooldown < 0) {
+                    enemyDeathSound.play(0.3f, MathUtils.random(0.8f,1.2f), 0.5f);
+                }
             }
         }
-        if (enemies.size() < 1) {
+        if (enemies.size() < 1 && started) {
             numberOfSkeletons++;
             addWaveOfSkeletons();
         }
-        Rectangle rect = new Rectangle(playerPosition.x, playerPosition.y, 16, 16);
-
-        if (enemyCollision(rect)) {
-            wizardLife = wizardLife - 1;
-            wizardDeathSound.play();
-            if (wizardLife < 1) {
-                if (enemiesKilled > previousHighScore) {
-                    prefs.putInteger("highscore", enemiesKilled);
-                    previousHighScore = enemiesKilled;
-                }
-            }
+        waitStart = waitStart - Gdx.graphics.getDeltaTime();
+        if (waitStart < 0 && !started) {
+            started = true;
+            addWaveOfSkeletons();
         }
     }
 
@@ -251,13 +273,14 @@ public class WizardGame extends ApplicationAdapter {
     }
 
     private void resetGame() {
+        waitStart = WAIT_START_COOLDOWN;
         wizardLife = 3;
         playerPosition = new Vector2(128, 128);
         enemies.clear();
         bullets.clear();
         enemiesKilled = 0;
         numberOfSkeletons = 4;
-        addWaveOfSkeletons();
+        started = false;
     }
 
     private void addWaveOfSkeletons() {
