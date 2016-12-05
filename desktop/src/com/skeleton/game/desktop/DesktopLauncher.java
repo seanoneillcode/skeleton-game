@@ -3,6 +3,7 @@ package com.skeleton.game.desktop;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 import com.skeleton.game.CromwellGame;
+import com.skeleton.game.MazeGame;
 import com.skeleton.game.SkeletonGame;
 import com.skeleton.game.WizardGame;
 
