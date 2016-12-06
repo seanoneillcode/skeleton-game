@@ -1,4 +1,4 @@
-package com.skeleton.game;
+package com.skeleton.game.core;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
@@ -6,9 +6,9 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.Vector2;
 
 public class Enemy {
-    Sprite sprite;
-    int health;
-    float speed;
+    public Sprite sprite;
+    public int health;
+    public float speed;
 
     public Enemy(Texture texture, Vector2 pos, int health, float speed) {
         this.sprite = new Sprite(texture);

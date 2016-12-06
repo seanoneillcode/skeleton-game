@@ -1,4 +1,4 @@
-package com.skeleton.game;
+package com.skeleton.game.core;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
@@ -7,9 +7,9 @@ import com.badlogic.gdx.math.Vector2;
 
 public class Bullet {
 
-    float ttl;
-    Sprite sprite;
-    Vector2 dir;
+    public float ttl;
+    public Sprite sprite;
+    public Vector2 dir;
 
     public Bullet(Texture texture, Vector2 dir, Vector2 pos) {
         sprite = new Sprite(texture);

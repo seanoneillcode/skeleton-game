@@ -13,6 +13,6 @@ public class DesktopLauncher {
         config.fullscreen = false;
 		config.width = 1024;
 		config.height = 768;
-		new LwjglApplication(new WizardGame(), config);
+		new LwjglApplication(new MazeGame(), config);
 	}
 }
