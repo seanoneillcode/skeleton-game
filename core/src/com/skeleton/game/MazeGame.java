@@ -30,43 +30,44 @@ import com.skeleton.game.core.Entity;
 public class MazeGame extends ApplicationAdapter {
 	SpriteBatch batch;
 	Texture skull;
-    Texture mud, stone;
+    Texture mud, stone, potato;
     Vector2 playerPosition;
-    private static final float PLAYER_SPEED = 1000.0f;
+    private static final float PLAYER_SPEED = 5000.0f;
     BitmapFont font;
 
     float screenWidth;
     float screenHeight;
 
-    float SCALE = 10f;
+    float SCALE = 1f;
 
     private OrthographicCamera cam;
-    final float VIRTUAL_HEIGHT = 768f;
+    final float VIRTUAL_HEIGHT = 256f;
 
     private static final int NUM_TILES_X = 16;
-    private static final int NUM_TILES_Y = 16;
+    private static final int NUM_TILES_Y = 21;
     private static final int TILE_SIZE = 16;
 
     private int[][] mapDataArray = {
-            {0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0},
-            {0,1,1,1,1,0,1,0,1,1,1,1,0,1,0,0},
-            {0,0,0,0,1,0,1,0,1,0,0,0,0,1,0,0},
-            {1,1,1,0,1,0,1,0,0,0,1,0,1,1,0,0},
-            {0,0,1,0,0,0,1,0,1,0,1,0,1,1,1,0},
-            {0,0,1,0,1,0,1,0,1,0,0,0,0,0,1,0},
-            {0,0,0,0,1,0,1,0,1,1,1,1,1,0,1,0},
-            {0,0,1,0,1,0,0,0,0,1,0,0,0,0,0,0},
-            {0,0,1,0,1,0,0,0,0,1,0,1,1,1,0,1},
-            {0,0,1,0,1,0,0,0,0,1,0,0,0,1,0,1},
-            {0,0,1,0,1,1,1,1,1,1,0,1,0,1,0,1},
-            {0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1},
-            {0,0,1,1,1,0,1,0,1,1,0,1,1,0,1,1},
-            {0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0},
-            {0,0,1,1,1,0,0,0,1,0,0,1,1,1,1,0},
-            {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+            {1,0,0,1,1,0,0,0,1,1,0,0,0,0,0,1,1,0,0,0,1},
+            {1,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1},
+            {1,1,1,0,1,0,1,0,0,0,0,0,0,2,0,1,0,1,1,0,1},
+            {1,0,1,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1,1,1,1},
+            {1,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,1,1},
+            {1,0,0,0,1,0,1,0,1,1,0,0,2,0,0,1,1,1,0,1,1},
+            {1,0,1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1},
+            {1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,1},
+            {1,0,1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,1},
+            {1,0,1,0,1,1,1,1,0,1,2,0,0,0,0,0,1,0,1,0,1},
+            {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1},
+            {1,0,1,1,1,0,1,0,1,1,1,1,1,1,1,0,1,1,0,1,1},
+            {1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+            {1,0,1,1,1,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1},
+            {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     };
 
     List<Entity> mapData;
+    List<Entity> entities;
 
     World world;
     Matrix4 debugMatrix;
@@ -88,6 +89,7 @@ public class MazeGame extends ApplicationAdapter {
         skull = new Texture("wizard.png");
         mud = new Texture("mud-tile.png");
         stone = new Texture("stone-tile.png");
+        potato = new Texture("potato-tile.png");
         playerPosition = new Vector2(0,0);
 
         FileHandle handle = Gdx.files.internal("MavenPro-regular.ttf");
@@ -99,6 +101,7 @@ public class MazeGame extends ApplicationAdapter {
 
         debugRenderer = new Box2DDebugRenderer();
 
+        entities = new ArrayList<Entity>();
         mapData = loadMap(mapDataArray);
 
         player = createPlayer();
@@ -111,15 +114,16 @@ public class MazeGame extends ApplicationAdapter {
         List<Entity> mapTiles = new ArrayList<Entity>();
         for (int i = 0; i < NUM_TILES_X; i++) {
             for (int j = 0; j < NUM_TILES_Y; j++) {
-                Texture t = mapDataArray[i][j] == 0 ? mud : stone;
 
                 if (mapDataArray[i][j] == 0) {
-                    Sprite sprite = new Sprite(t);
-                    sprite.setPosition(i * TILE_SIZE, j * TILE_SIZE);
+                    Sprite sprite = new Sprite(mud);
+                    sprite.setPosition(j * TILE_SIZE, i * TILE_SIZE);
                     mapTiles.add(new Entity(sprite, null));
-                } else {
-                    Sprite sprite = new Sprite(t);
-                    sprite.setPosition(i * TILE_SIZE, j * TILE_SIZE);
+                    continue;
+                }
+                if (mapDataArray[i][j] == 1) {
+                    Sprite sprite = new Sprite(stone);
+                    sprite.setPosition(j * TILE_SIZE, i * TILE_SIZE);
 
                     BodyDef bodyDef = new BodyDef();
                     bodyDef.type = BodyDef.BodyType.StaticBody;
@@ -137,6 +141,36 @@ public class MazeGame extends ApplicationAdapter {
 
                     shape.dispose();
                     mapTiles.add(new Entity(sprite, body));
+                    continue;
+                }
+                if (mapDataArray[i][j] == 2) {
+                    // mud tile
+                    Sprite sprite = new Sprite(mud);
+                    sprite.setPosition(j * TILE_SIZE, i * TILE_SIZE);
+                    mapTiles.add(new Entity(sprite, null));
+
+                    // potato
+                    sprite = new Sprite(potato);
+                    sprite.setPosition(j * TILE_SIZE, i * TILE_SIZE);
+
+                    BodyDef bodyDef = new BodyDef();
+                    bodyDef.type = BodyDef.BodyType.DynamicBody;
+                    bodyDef.position.set(sprite.getX(), sprite.getY());
+                    Body body = world.createBody(bodyDef);
+                    body.setLinearDamping(3.0f);
+                    CircleShape shape = new CircleShape();
+                    shape.setRadius(6);
+
+                    FixtureDef fixtureDef = new FixtureDef();
+                    fixtureDef.shape = shape;
+                    fixtureDef.density = 0.1f;
+                    fixtureDef.friction = 0f;
+
+
+                    Fixture fixture = body.createFixture(fixtureDef);
+
+                    shape.dispose();
+                    entities.add(new Entity(sprite, body));
                 }
             }
         }
@@ -152,7 +186,7 @@ public class MazeGame extends ApplicationAdapter {
 
     public Entity createPlayer() {
         Sprite sprite = new Sprite(new Texture("wizard.png"));
-        sprite.setPosition(0, 0);
+        sprite.setPosition(16, 16);
 
 
         BodyDef bodyDef = new BodyDef();
@@ -162,16 +196,15 @@ public class MazeGame extends ApplicationAdapter {
         Body body = world.createBody(bodyDef);
         body.setFixedRotation(true);
         body.setBullet(true);
+        body.setLinearDamping(3.0f);
 
         CircleShape shape = new CircleShape();
         shape.setRadius(6);
-//        PolygonShape shape = new PolygonShape();
-//        shape.setAsBox(sprite.getWidth()/3, sprite.getHeight()/3);
 
         FixtureDef fixtureDef = new FixtureDef();
         fixtureDef.shape = shape;
         fixtureDef.density = 0.1f;
-        fixtureDef.friction = 0f;
+        fixtureDef.friction = 0.1f;
 
         Fixture fixture = body.createFixture(fixtureDef);
 
@@ -207,7 +240,11 @@ public class MazeGame extends ApplicationAdapter {
 		batch.begin();
 
         for (Entity entity : mapData) {
-            entity.sprite.draw(batch);
+            batch.draw(entity.sprite, entity.sprite.getX(), entity.sprite.getY());
+        }
+        for (Entity entity : entities) {
+            entity.update();
+            batch.draw(entity.sprite, entity.sprite.getX(), entity.sprite.getY());
         }
 
         player.update();
@@ -240,18 +277,23 @@ public class MazeGame extends ApplicationAdapter {
         boolean isUpPressed = Gdx.input.isKeyPressed(Input.Keys.UP);
         boolean isDownPressed = Gdx.input.isKeyPressed(Input.Keys.DOWN);
 
-        player.body.setLinearVelocity(0, 0);
+        Vector2 pos = player.body.getPosition();
+//        player.body.setLinearVelocity(0, 0);
         if (isLeftPressed) {
-            player.body.setLinearVelocity(-actualSpeed, 0);
+            player.body.applyLinearImpulse(-actualSpeed, 0, pos.x, pos.y, true);
+//            player.body.setLinearVelocity(-actualSpeed, 0);
         }
         if (isRightPressed) {
-            player.body.setLinearVelocity(actualSpeed, 0);
+            player.body.applyLinearImpulse(actualSpeed, 0, pos.x, pos.y, true);
+//            player.body.setLinearVelocity(actualSpeed, 0);
         }
         if (isUpPressed) {
-            player.body.setLinearVelocity(0, actualSpeed);
+            player.body.applyLinearImpulse(0, actualSpeed, pos.x, pos.y, true);
+//            player.body.setLinearVelocity(0, actualSpeed);
         }
         if (isDownPressed) {
-            player.body.setLinearVelocity(0, -actualSpeed);
+            player.body.applyLinearImpulse(0, -actualSpeed, pos.x, pos.y, true);
+//            player.body.setLinearVelocity(0, -actualSpeed);
         }
         if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
